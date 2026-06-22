@@ -19,8 +19,8 @@ Set these under **Repository settings -> Secrets and variables -> Actions -> Sec
 
 | Secret | Used by |
 | --- | --- |
-| `PORTAINER_WEBHOOK_FRONTEND` | Development frontend deployment webhook |
-| `PORTAINER_WEBHOOK_BACKEND` | Development backend deployment webhook |
+| `PORTAINER_WEBHOOK_FRONTEND_DEV` | Development frontend deployment webhook |
+| `PORTAINER_WEBHOOK_BACKEND_DEV` | Development backend deployment webhook |
 | `PORTAINER_WEBHOOK_FRONTEND_PROD` | Production frontend deployment webhook |
 | `PORTAINER_WEBHOOK_BACKEND_PROD` | Production backend deployment webhook |
 

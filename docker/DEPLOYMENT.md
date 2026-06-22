@@ -108,7 +108,7 @@ GitHub Actions workflows build images and push environment-specific tags to GitH
 - **Builds**: Frontend, Backend when their source files changed; manual runs build both
 - **Registry**: `ghcr.io/<owner>/`
 - **Tags**: `dev`, `dev-<commit-sha>`
-- **Webhooks**: `PORTAINER_WEBHOOK_FRONTEND`, `PORTAINER_WEBHOOK_BACKEND`
+- **Webhooks**: `PORTAINER_WEBHOOK_FRONTEND_DEV`, `PORTAINER_WEBHOOK_BACKEND_DEV`
 
 ### Production (`deploy-production.yml`)
 
@@ -132,8 +132,8 @@ GitHub Actions workflows build images and push environment-specific tags to GitH
 
 | Secret | Description |
 |--------|-------------|
-| `PORTAINER_WEBHOOK_FRONTEND` | Development frontend service webhook |
-| `PORTAINER_WEBHOOK_BACKEND` | Development backend service webhook |
+| `PORTAINER_WEBHOOK_FRONTEND_DEV` | Development frontend service webhook |
+| `PORTAINER_WEBHOOK_BACKEND_DEV` | Development backend service webhook |
 | `PORTAINER_WEBHOOK_FRONTEND_PROD` | Production frontend service webhook |
 | `PORTAINER_WEBHOOK_BACKEND_PROD` | Production backend service webhook |
 
@@ -157,7 +157,7 @@ To auto-redeploy when new images are pushed:
 3. Copy the webhook URL
 4. In GitHub: **Settings** → **Secrets and variables** → **Actions**
 5. Add the matching GitHub secret with the webhook URL:
-   - Development: `PORTAINER_WEBHOOK_FRONTEND` and `PORTAINER_WEBHOOK_BACKEND`
+   - Development: `PORTAINER_WEBHOOK_FRONTEND_DEV` and `PORTAINER_WEBHOOK_BACKEND_DEV`
    - Production: `PORTAINER_WEBHOOK_FRONTEND_PROD` and `PORTAINER_WEBHOOK_BACKEND_PROD`
 
 ## Environment Variables

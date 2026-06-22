@@ -16,8 +16,8 @@
 #   - ghcr.io/<owner>/fstvlpress-backend:dev
 #
 # Required secrets:
-#   PORTAINER_WEBHOOK_FRONTEND - Portainer webhook URL for frontend service
-#   PORTAINER_WEBHOOK_BACKEND  - Portainer webhook URL for backend service
+#   PORTAINER_WEBHOOK_FRONTEND_DEV - Portainer webhook URL for frontend service
+#   PORTAINER_WEBHOOK_BACKEND_DEV  - Portainer webhook URL for backend service
 # =============================================================================
 
 name: Deploy Development
@@ -220,13 +220,13 @@ jobs:
         if: needs.build-backend.result == 'success'
         run: |
           echo "Triggering backend service update..."
-          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_BACKEND }}" || echo "::warning::Backend webhook failed"
+          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_BACKEND_DEV }}" || echo "::warning::Backend webhook failed"
 
       - name: Trigger frontend webhook
         if: needs.build-frontend.result == 'success'
         run: |
           echo "Triggering frontend service update..."
-          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_FRONTEND }}" || echo "::warning::Frontend webhook failed"
+          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_FRONTEND_DEV }}" || echo "::warning::Frontend webhook failed"
 
       - name: Normalize image registry
         id: registry
