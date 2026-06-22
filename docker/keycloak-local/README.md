@@ -28,7 +28,7 @@ This uses your existing local MongoDB and MinIO, and just adds Keycloak for auth
 3. **Start the backend** with local Keycloak config:
    ```bash
    cd backend
-   ENVIRONMENT=local-keycloak KEYCLOAK_SERVER_URL=http://localhost:8180 KEYCLOAK_REALM=FstvlPressLocal KEYCLOAK_CLIENT_ID=fstvlpress-api KEYCLOAK_CLIENT_SECRET=local-dev-client-secret KEYCLOAK_JWT_AUDIENCE=account python -m uvicorn app.main:app --reload --port 8080
+   ENVIRONMENT=local-keycloak APP_TOKEN_SECRET=local-dev-app-token-secret python -m uvicorn app.main:app --reload --port 8080
    ```
 
 4. **Start the frontend** with local Keycloak enabled:
@@ -117,8 +117,8 @@ lsof -i :8180
 
 ### Token validation fails
 - Ensure backend is configured with `ENVIRONMENT=local-keycloak`
-- Check that `KEYCLOAK_SERVER_URL=http://localhost:8180` in backend .env
-- Check that `KEYCLOAK_JWT_AUDIENCE=account` in backend .env
+- Check that the token issuer is reachable from the backend
+- The backend expects `aud=account` by default
 - If logs show `Audience mismatch`, update the `fstvlpress-web` client audience mapper to include `account`, then log out and back in to get a fresh token.
 - Existing local realms are not overwritten by `--import-realm`; recreate the local Keycloak container if it was imported with an older audience.
 - Verify the backend can reach Keycloak:

@@ -20,7 +20,7 @@ services:
   frontend:
     # Default to GHCR images so Portainer does not silently fall back to stale
     # host-local images after host upgrades/reinstalls.
-    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-frontend:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-frontend:${TAG:?Set TAG to dev or prod}
     environment:
       - S3_BUCKET=${S3_BUCKET:-fstvlpress-assets}
       - APP_DISPLAY_NAME=${APP_DISPLAY_NAME:-}
@@ -77,7 +77,7 @@ services:
   # Backend - FastAPI Application
   # =============================================================================
   backend:
-    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-backend:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-backend:${TAG:?Set TAG to dev or prod}
     deploy:
       mode: replicated
       replicas: 1
@@ -105,10 +105,8 @@ services:
       - ENVIRONMENT=production
       - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}@mongodb:27017
       - MONGO_DB=${MONGO_DB:-2026}
-      - KEYCLOAK_SERVER_URL=${KEYCLOAK_SERVER_URL:?Set KEYCLOAK_SERVER_URL}
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM:?Set KEYCLOAK_REALM}
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:?Set KEYCLOAK_CLIENT_ID}
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-}
+      - APP_TOKEN_SECRET=${APP_TOKEN_SECRET:?Set APP_TOKEN_SECRET}
+      - KEYCLOAK_ADMIN_ROLES=${KEYCLOAK_ADMIN_ROLES:-}
       - STORAGE_BACKEND=s3
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_REGION=${S3_REGION:-us-east-1}

@@ -3011,10 +3011,10 @@ function handleSnippetChangedEvent() {
 }
 
 onMounted(() => {
-  window.addEventListener('ssc:open-design-override', handleOpenOverrideEvent);
-  window.addEventListener('ssc:open-design-custom-css', handleOpenCustomCssEvent);
-  window.addEventListener('ssc:css-snippet-created', handleSnippetChangedEvent);
-  window.addEventListener('ssc:css-snippet-changed', handleSnippetChangedEvent);
+  window.addEventListener('fstvlpress:open-design-override', handleOpenOverrideEvent);
+  window.addEventListener('fstvlpress:open-design-custom-css', handleOpenCustomCssEvent);
+  window.addEventListener('fstvlpress:css-snippet-created', handleSnippetChangedEvent);
+  window.addEventListener('fstvlpress:css-snippet-changed', handleSnippetChangedEvent);
 });
 
 async function handleUndo() { await undoDesignChange(); }
@@ -3225,10 +3225,10 @@ async function runAutoSave() {
 }
 
 onBeforeUnmount(() => {
-  window.removeEventListener('ssc:open-design-override', handleOpenOverrideEvent);
-  window.removeEventListener('ssc:open-design-custom-css', handleOpenCustomCssEvent);
-  window.removeEventListener('ssc:css-snippet-created', handleSnippetChangedEvent);
-  window.removeEventListener('ssc:css-snippet-changed', handleSnippetChangedEvent);
+  window.removeEventListener('fstvlpress:open-design-override', handleOpenOverrideEvent);
+  window.removeEventListener('fstvlpress:open-design-custom-css', handleOpenCustomCssEvent);
+  window.removeEventListener('fstvlpress:css-snippet-created', handleSnippetChangedEvent);
+  window.removeEventListener('fstvlpress:css-snippet-changed', handleSnippetChangedEvent);
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   clearAutoSaveStatusTimer();
 });

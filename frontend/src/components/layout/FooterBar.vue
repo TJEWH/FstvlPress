@@ -128,8 +128,8 @@ function applyFooterLogoPayload(payload) {
 
 function applyPublicFooterLogoPayload() {
   applyFooterLogoPayload({
-    footer_logo_url: window.__SSC_PUBLIC_FOOTER_LOGO_URL,
-    footer_logo_responsive_variants: window.__SSC_PUBLIC_FOOTER_LOGO_RESPONSIVE_VARIANTS,
+    footer_logo_url: window.__FSTVLPRESS_PUBLIC_FOOTER_LOGO_URL,
+    footer_logo_responsive_variants: window.__FSTVLPRESS_PUBLIC_FOOTER_LOGO_RESPONSIVE_VARIANTS,
   });
 }
 
@@ -394,7 +394,7 @@ async function loadFooterItems() {
   try {
     const usePublicCache = !state.isAdmin && !state.previewMode;
     if (usePublicCache) {
-      const cachedFooter = window.__SSC_PUBLIC_FOOTER_ITEMS;
+      const cachedFooter = window.__FSTVLPRESS_PUBLIC_FOOTER_ITEMS;
       footerItems.value = Array.isArray(cachedFooter) ? cachedFooter : [];
       applyPublicFooterLogoPayload();
       return;
@@ -415,7 +415,7 @@ async function loadFooterItems() {
 
 function handlePublicFooterUpdate() {
   if (state.isAdmin || state.previewMode) return;
-  const cachedFooter = window.__SSC_PUBLIC_FOOTER_ITEMS;
+  const cachedFooter = window.__FSTVLPRESS_PUBLIC_FOOTER_ITEMS;
   if (Array.isArray(cachedFooter)) {
     footerItems.value = cachedFooter;
   }

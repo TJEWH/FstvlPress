@@ -4165,7 +4165,7 @@ function openSectionDesignPanel(sectionKey) {
     state.activeSectionDesignKey = sectionKey;
     logDebug("openSectionDesignPanel", { sectionKey });
     if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('ssc:open-design-override', { detail: { sectionKey } }));
+        window.dispatchEvent(new CustomEvent('fstvlpress:open-design-override', { detail: { sectionKey } }));
     }
 }
 

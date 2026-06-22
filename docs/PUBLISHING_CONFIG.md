@@ -19,8 +19,8 @@ Set these under **Repository settings -> Secrets and variables -> Actions -> Sec
 
 | Secret | Used by |
 | --- | --- |
-| `PORTAINER_WEBHOOK_FRONTEND` | Development frontend deployment webhook |
-| `PORTAINER_WEBHOOK_BACKEND` | Development backend deployment webhook |
+| `PORTAINER_WEBHOOK_FRONTEND_DEV` | Development frontend deployment webhook |
+| `PORTAINER_WEBHOOK_BACKEND_DEV` | Development backend deployment webhook |
 | `PORTAINER_WEBHOOK_FRONTEND_PROD` | Production frontend deployment webhook |
 | `PORTAINER_WEBHOOK_BACKEND_PROD` | Production backend deployment webhook |
 
@@ -33,17 +33,14 @@ Use `docker/.env.example` as the template for local Docker Compose or Portainer 
 | Variable | Purpose |
 | --- | --- |
 | `REGISTRY` | Image registry prefix, for example `ghcr.io/your-org/` |
-| `TAG` | Image tag to deploy |
+| `TAG` | Image tag to deploy; use `dev` for the development stack and `prod` for the production stack |
 | `FRONTEND_PORT` | Public frontend port |
 | `APP_DISPLAY_NAME` | Public display name shown in the browser title, header, and footer |
 | `OIDC_URL` | Public OIDC issuer base URL used by the browser app |
 | `OIDC_REALM_NAME` | Public OIDC realm name used by the browser app |
 | `OIDC_CLIENT_ID` | Public SPA client ID |
 | `OIDC_CLIENT_SECRET` | Optional server-side token proxy secret; never exposed to browser |
-| `KEYCLOAK_SERVER_URL` | Backend Keycloak/OIDC base URL |
-| `KEYCLOAK_REALM` | Backend realm name |
-| `KEYCLOAK_CLIENT_ID` | Backend confidential client ID |
-| `KEYCLOAK_CLIENT_SECRET` | Backend confidential client secret |
+| `APP_TOKEN_SECRET` | Backend-issued app-token signing secret |
 | `KEYCLOAK_ADMIN_ROLES` | Optional comma-separated admin roles |
 | `MONGO_DB` | MongoDB database name |
 | `MONGO_ROOT_USER` | MongoDB root username |
@@ -67,6 +64,8 @@ Use `docker/.env.example` as the template for local Docker Compose or Portainer 
 
 Timeout variables in `docker/.env.example` can usually keep their defaults: `API_PROXY_READ_TIMEOUT`, `API_PROXY_SEND_TIMEOUT`, `API_PROXY_CONNECT_TIMEOUT`, `BACKUP_UPLOAD_MAX_BODY_SIZE`, `BACKUP_PROXY_READ_TIMEOUT`, `BACKUP_PROXY_SEND_TIMEOUT`, and `BACKUP_CLIENT_BODY_TIMEOUT`.
 
+Hosted Keycloak/OIDC connection settings are frontend-owned. The backend validates Keycloak access tokens against the issuer carried by the token, expects the default `account` audience, and only uses `KEYCLOAK_ADMIN_ROLES` to map Keycloak roles to internal admin access.
+
 ## Frontend Local Development
 
 For local Vite development, set this in a local, ignored frontend env file if you want the same display name without Docker runtime config:
@@ -88,10 +87,6 @@ Copy `backend/.env.example` to `backend/.env` for local or direct backend deploy
 | `ENVIRONMENT` | `dev`, `local-keycloak`, or `production` |
 | `MONGO_URI` | MongoDB connection URI |
 | `MONGO_DB` | MongoDB database name |
-| `KEYCLOAK_SERVER_URL` | Backend Keycloak/OIDC base URL |
-| `KEYCLOAK_REALM` | Backend realm name |
-| `KEYCLOAK_CLIENT_ID` | Backend confidential client ID |
-| `KEYCLOAK_CLIENT_SECRET` | Backend confidential client secret |
 | `STORAGE_BACKEND` | `s3` or `ftp` |
 | `S3_ENDPOINT_URL` | S3/MinIO endpoint |
 | `S3_ACCESS_KEY_ID` | S3/MinIO access key |
@@ -101,6 +96,7 @@ Copy `backend/.env.example` to `backend/.env` for local or direct backend deploy
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins |
 | `BACKUP_API_TOKEN` | Server-to-server backup API token |
 | `APP_TOKEN_SECRET` | Backend-issued app-token signing secret |
+| `KEYCLOAK_ADMIN_ROLES` | Optional comma-separated admin roles |
 
 ## Local Keycloak Fixture
 
@@ -108,10 +104,8 @@ The local-only Keycloak fixture uses generic demo values:
 
 | Variable | Value |
 | --- | --- |
-| `KEYCLOAK_REALM` | `FstvlPressLocal` |
 | `VITE_LOCAL_KEYCLOAK_REALM` | `FstvlPressLocal` |
 | `VITE_LOCAL_KEYCLOAK_CLIENT_ID` | `fstvlpress-web` |
-| `KEYCLOAK_CLIENT_ID` | `fstvlpress-api` |
-| `KEYCLOAK_CLIENT_SECRET` | `local-dev-client-secret` |
+| `APP_TOKEN_SECRET` | `local-dev-app-token-secret` |
 
 The sample local users and passwords are for local development only and must not be reused in any hosted environment.

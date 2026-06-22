@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     mongo_uri: str = "mongodb://localhost:27017"
     mongo_db: str = "2026"
 
-    # Keycloak Configuration
+    # Optional legacy/direct-backend Keycloak overrides.
+    # Docker/Portainer deployments leave these unset; token verification derives
+    # issuer/JWKS from the incoming Keycloak token.
     keycloak_server_url: str = ""
     keycloak_realm: str = ""
     keycloak_client_id: str = ""
