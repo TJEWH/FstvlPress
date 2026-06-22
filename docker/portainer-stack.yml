@@ -20,7 +20,7 @@ services:
   frontend:
     # Default to GHCR images so Portainer does not silently fall back to stale
     # host-local images after host upgrades/reinstalls.
-    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-frontend:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-frontend:${TAG:?Set TAG to dev or prod}
     environment:
       - S3_BUCKET=${S3_BUCKET:-fstvlpress-assets}
       - APP_DISPLAY_NAME=${APP_DISPLAY_NAME:-}
@@ -77,7 +77,7 @@ services:
   # Backend - FastAPI Application
   # =============================================================================
   backend:
-    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-backend:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-backend:${TAG:?Set TAG to dev or prod}
     deploy:
       mode: replicated
       replicas: 1

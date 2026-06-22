@@ -68,13 +68,13 @@ docker-compose -f docker/docker-compose.yml --env-file docker/.env.prod up -d
    # Build images (from project root)
    docker-compose -f docker/docker-compose.yml build
 
-   # Tag for registry
-   docker tag fstvlpress-frontend:latest your-registry/fstvlpress-frontend:latest
-   docker tag fstvlpress-backend:latest your-registry/fstvlpress-backend:latest
+   # Tag for registry. Use prod for production or dev for development.
+   docker tag fstvlpress-frontend:latest your-registry/fstvlpress-frontend:prod
+   docker tag fstvlpress-backend:latest your-registry/fstvlpress-backend:prod
 
    # Push to registry
-   docker push your-registry/fstvlpress-frontend:latest
-   docker push your-registry/fstvlpress-backend:latest
+   docker push your-registry/fstvlpress-frontend:prod
+   docker push your-registry/fstvlpress-backend:prod
    ```
 
 2. **In Portainer**:
@@ -98,39 +98,55 @@ Automated deployment via GitHub Actions. See [CI/CD Setup](#cicd-setup) below.
 
 ## CI/CD Setup
 
-GitHub Actions workflow builds images and pushes to GitHub Container Registry.
+GitHub Actions workflows build images and push environment-specific tags to GitHub Container Registry. Do not point hosted Portainer stacks at a shared `latest` tag.
 
-### Production (`deploy-production.yml`)
+### Development (`deploy-development.yml`)
 
 - **Triggers**:
   - Push to `dev` branch
   - Manual (`workflow_dispatch`)
-  - Release published
+- **Builds**: Frontend, Backend when their source files changed; manual runs build both
+- **Registry**: `ghcr.io/<owner>/`
+- **Tags**: `dev`, `dev-<commit-sha>`
+- **Webhooks**: `PORTAINER_WEBHOOK_FRONTEND`, `PORTAINER_WEBHOOK_BACKEND`
+
+### Production (`deploy-production.yml`)
+
+- **Triggers**:
+  - Push to `main` branch
 - **Builds**: Frontend, Backend
 - **Registry**: `ghcr.io/<owner>/`
-- **Tags**: `latest`, `<commit-sha>`
+- **Tags**: `prod`, `prod-<commit-sha>`
+- **Webhooks**: `PORTAINER_WEBHOOK_FRONTEND_PROD`, `PORTAINER_WEBHOOK_BACKEND_PROD`
 
 ### Images
 
 | Image | URL |
 |-------|-----|
-| Frontend | `ghcr.io/<owner>/fstvlpress-frontend:latest` |
-| Backend | `ghcr.io/<owner>/fstvlpress-backend:latest` |
+| Development frontend | `ghcr.io/<owner>/fstvlpress-frontend:dev` |
+| Development backend | `ghcr.io/<owner>/fstvlpress-backend:dev` |
+| Production frontend | `ghcr.io/<owner>/fstvlpress-frontend:prod` |
+| Production backend | `ghcr.io/<owner>/fstvlpress-backend:prod` |
 
 ### GitHub Secrets (optional)
 
 | Secret | Description |
 |--------|-------------|
-| `PORTAINER_WEBHOOK_PRODUCTION` | Portainer webhook URL to auto-redeploy after push |
+| `PORTAINER_WEBHOOK_FRONTEND` | Development frontend service webhook |
+| `PORTAINER_WEBHOOK_BACKEND` | Development backend service webhook |
+| `PORTAINER_WEBHOOK_FRONTEND_PROD` | Production frontend service webhook |
+| `PORTAINER_WEBHOOK_BACKEND_PROD` | Production backend service webhook |
 
 ### Portainer Stack Configuration
 
-`docker/portainer-stack.yml` defaults `REGISTRY` to a placeholder. Set it explicitly before deploying so Portainer pulls the intended images.
+`docker/portainer-stack.yml` defaults `REGISTRY` to a placeholder and requires `TAG`. Set both explicitly before deploying so Portainer pulls the intended images.
 
 Recommended:
 - Set `REGISTRY=ghcr.io/<owner>/` explicitly in Portainer
-- Set `TAG` to a known build tag (for example a commit SHA) when debugging/recovering
-- In Portainer, enable pulling the latest image on redeploy/service update
+- Set `TAG=dev` in the development stack
+- Set `TAG=prod` in the production stack
+- Set `TAG` to an environment-prefixed build tag (for example `dev-<commit-sha>` or `prod-<commit-sha>`) when debugging/recovering
+- In Portainer, enable image pulling on redeploy/service update
 
 ### Portainer Webhook Setup (Optional)
 
@@ -140,7 +156,9 @@ To auto-redeploy when new images are pushed:
 2. Click **Add webhook**
 3. Copy the webhook URL
 4. In GitHub: **Settings** → **Secrets and variables** → **Actions**
-5. Add secret: `PORTAINER_WEBHOOK_PRODUCTION` with the URL
+5. Add the matching GitHub secret with the webhook URL:
+   - Development: `PORTAINER_WEBHOOK_FRONTEND` and `PORTAINER_WEBHOOK_BACKEND`
+   - Production: `PORTAINER_WEBHOOK_FRONTEND_PROD` and `PORTAINER_WEBHOOK_BACKEND_PROD`
 
 ## Environment Variables
 
@@ -165,7 +183,7 @@ Configure these in Portainer or your `.env` file:
 | `S3_ACCESS_KEY_ID` | (uses root) | Service account for backend (least-privilege) |
 | `S3_SECRET_ACCESS_KEY` | (uses root) | Secret for service account |
 | `REGISTRY` | `ghcr.io/<owner>/` | Image registry prefix for frontend/backend images |
-| `TAG` | `latest` | Docker image tag |
+| `TAG` | `prod` in `.env.example` | Docker image tag; use `dev` for development and `prod` for production |
 | `FRONTEND_PORT` | `80` | Frontend exposed port |
 | `KEYCLOAK_PORT` | `8080` | Keycloak exposed port |
 | `MONGO_DB` | `2026` | MongoDB database name |

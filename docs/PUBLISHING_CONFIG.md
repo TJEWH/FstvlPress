@@ -33,7 +33,7 @@ Use `docker/.env.example` as the template for local Docker Compose or Portainer 
 | Variable | Purpose |
 | --- | --- |
 | `REGISTRY` | Image registry prefix, for example `ghcr.io/your-org/` |
-| `TAG` | Image tag to deploy |
+| `TAG` | Image tag to deploy; use `dev` for the development stack and `prod` for the production stack |
 | `FRONTEND_PORT` | Public frontend port |
 | `APP_DISPLAY_NAME` | Public display name shown in the browser title, header, and footer |
 | `OIDC_URL` | Public OIDC issuer base URL used by the browser app |

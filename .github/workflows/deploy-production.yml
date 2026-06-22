@@ -11,8 +11,8 @@
 #   - Push to 'main' branch, including pull request merges
 #
 # Images pushed to:
-#   - ghcr.io/<owner>/fstvlpress-frontend:latest
-#   - ghcr.io/<owner>/fstvlpress-backend:latest
+#   - ghcr.io/<owner>/fstvlpress-frontend:prod
+#   - ghcr.io/<owner>/fstvlpress-backend:prod
 #
 # Required secrets:
 #   PORTAINER_WEBHOOK_FRONTEND_PROD - Portainer webhook URL for frontend prod service
@@ -27,7 +27,7 @@ on:
       - main
 
 env:
-  TAG: latest
+  IMAGE_TAG: prod
   APP_DISPLAY_NAME: ${{ vars.APP_DISPLAY_NAME }}
   OIDC_URL: ${{ vars.OIDC_URL }}
   OIDC_REALM_NAME: ${{ vars.OIDC_REALM_NAME }}
@@ -156,8 +156,8 @@ jobs:
           file: ./frontend/docker/Dockerfile
           push: true
           tags: |
-            ${{ steps.registry.outputs.url }}fstvlpress-frontend:latest
-            ${{ steps.registry.outputs.url }}fstvlpress-frontend:${{ github.sha }}
+            ${{ steps.registry.outputs.url }}fstvlpress-frontend:${{ env.IMAGE_TAG }}
+            ${{ steps.registry.outputs.url }}fstvlpress-frontend:${{ env.IMAGE_TAG }}-${{ github.sha }}
           build-args: |
             VITE_API_BASE=/api/v1
             VITE_APP_DISPLAY_NAME=${{ env.APP_DISPLAY_NAME }}
@@ -204,8 +204,8 @@ jobs:
           file: ./backend/docker/Dockerfile
           push: true
           tags: |
-            ${{ steps.registry.outputs.url }}fstvlpress-backend:latest
-            ${{ steps.registry.outputs.url }}fstvlpress-backend:${{ github.sha }}
+            ${{ steps.registry.outputs.url }}fstvlpress-backend:${{ env.IMAGE_TAG }}
+            ${{ steps.registry.outputs.url }}fstvlpress-backend:${{ env.IMAGE_TAG }}-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -247,12 +247,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Services rebuilt and deployed:" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.build-frontend.result }}" = "success" ]; then
-            echo "- \`${{ steps.registry.outputs.url }}fstvlpress-frontend:latest\` — built & webhook triggered" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${{ steps.registry.outputs.url }}fstvlpress-frontend:${{ env.IMAGE_TAG }}\` — built & webhook triggered" >> $GITHUB_STEP_SUMMARY
           else
             echo "- \`fstvlpress-frontend\` — skipped (no changes)" >> $GITHUB_STEP_SUMMARY
           fi
           if [ "${{ needs.build-backend.result }}" = "success" ]; then
-            echo "- \`${{ steps.registry.outputs.url }}fstvlpress-backend:latest\` — built & webhook triggered" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${{ steps.registry.outputs.url }}fstvlpress-backend:${{ env.IMAGE_TAG }}\` — built & webhook triggered" >> $GITHUB_STEP_SUMMARY
           else
             echo "- \`fstvlpress-backend\` — skipped (no changes)" >> $GITHUB_STEP_SUMMARY
           fi
