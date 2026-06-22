@@ -273,11 +273,6 @@ S3_PUBLIC_BASE_URL=http://localhost:9000/fstvlpress-assets
 
 # API token for restore operations
 BACKUP_API_TOKEN=your_secure_token
-
-# Keycloak (configure for your environment)
-KEYCLOAK_SERVER_URL=https://your-keycloak.com/auth
-KEYCLOAK_REALM=your-realm
-KEYCLOAK_CLIENT_ID=your-client
 EOF
 
 # Install dependencies and start

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import HTTPException, status
@@ -27,31 +28,61 @@ class JWKSCache:
 
     def __init__(self, ttl_seconds: int = 3600):
         self.ttl = ttl_seconds
-        self._jwks: dict | None = None
-        self._exp: float = 0.0
+        self._entries: dict[str, tuple[dict, float]] = {}
 
-    async def get(self) -> dict:
+    async def get(self, jwks_url: str) -> dict:
         now = time.time()
-        if self._jwks and now < self._exp:
-            return self._jwks
+        cached = self._entries.get(jwks_url)
+        if cached:
+            jwks, expires_at = cached
+            if now < expires_at:
+                return jwks
         try:
             async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(settings.keycloak_jwks_url)
+                response = await client.get(jwks_url)
                 response.raise_for_status()
-                self._jwks = response.json()
-                self._exp = now + self.ttl
-                return self._jwks
+                jwks = response.json()
+                self._entries[jwks_url] = (jwks, now + self.ttl)
+                return jwks
         except Exception as exc:
-            logger.error("Failed to fetch JWKS from %s: %s", settings.keycloak_jwks_url, exc)
+            logger.error("Failed to fetch JWKS from %s: %s", jwks_url, exc)
             raise
 
     def invalidate(self) -> None:
         """Force refresh of JWKS on next request (useful when keys rotate)."""
-        self._jwks = None
-        self._exp = 0.0
+        self._entries.clear()
 
 
 jwks_cache = JWKSCache()
+
+
+def _configured_keycloak_issuer() -> str | None:
+    if settings.keycloak_issuer_override:
+        return settings.keycloak_issuer_override.rstrip("/")
+    if settings.keycloak_server_url and settings.keycloak_realm:
+        return settings.keycloak_issuer
+    return None
+
+
+def _normalize_token_issuer(raw_issuer: object) -> str:
+    issuer = str(raw_issuer or "").strip().rstrip("/")
+    if not issuer:
+        raise JWTClaimsError("Issuer is missing")
+
+    parsed = urlparse(issuer)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise JWTClaimsError(f"Invalid issuer URL: {issuer!r}")
+
+    if settings.environment == "production" and parsed.scheme != "https":
+        raise JWTClaimsError("Issuer must use https in production")
+
+    return issuer
+
+
+def _jwks_url_for_issuer(issuer: str, *, configured_issuer: str | None) -> str:
+    if settings.keycloak_jwks_url_override and configured_issuer and issuer == configured_issuer:
+        return settings.keycloak_jwks_url_override
+    return f"{issuer}/protocol/openid-connect/certs"
 
 
 class KeycloakUser(BaseModel):
@@ -160,20 +191,23 @@ async def verify_keycloak_token(token: str) -> KeycloakUser:
     Raises HTTPException 401 if token is invalid.
     """
     try:
-        jwks = await jwks_cache.get()
-
         unverified = jwt.get_unverified_claims(token)
         token_aud = unverified.get("aud")
-        token_iss = unverified.get("iss")
+        token_iss = _normalize_token_issuer(unverified.get("iss"))
         expected_aud = settings.keycloak_jwt_audience
-        expected_iss = settings.keycloak_issuer
+        configured_iss = _configured_keycloak_issuer()
+        expected_iss = configured_iss or token_iss
+        jwks_url = _jwks_url_for_issuer(token_iss, configured_issuer=configured_iss)
+
+        jwks = await jwks_cache.get(jwks_url)
 
         logger.debug(
-            "JWT verification: token aud=%r (expected=%r), iss=%r (expected=%r)",
+            "JWT verification: token aud=%r (expected=%r), iss=%r (expected=%r), jwks_url=%r",
             token_aud,
             expected_aud,
             token_iss,
             expected_iss,
+            jwks_url,
         )
 
         aud_matches = False
@@ -184,21 +218,23 @@ async def verify_keycloak_token(token: str) -> KeycloakUser:
 
         if not aud_matches:
             logger.warning("Audience mismatch: token has %r, expected %r", token_aud, expected_aud)
-        if token_iss != expected_iss:
-            logger.warning("Issuer mismatch: token has %r, expected %r", token_iss, expected_iss)
+        if configured_iss and token_iss != expected_iss:
+            raise JWTClaimsError(f"Issuer mismatch: {token_iss!r} vs {expected_iss!r}")
 
         claims = jwt.decode(
             token,
             jwks,
             algorithms=["RS256"],
-            issuer=settings.keycloak_issuer,
             options={
                 "verify_aud": False,
-                "verify_iss": True,
+                "verify_iss": False,
                 "verify_exp": True,
                 "verify_nbf": True,
             },
         )
+        decoded_iss = _normalize_token_issuer(claims.get("iss"))
+        if decoded_iss != expected_iss:
+            raise JWTClaimsError(f"Issuer mismatch: {decoded_iss!r} vs {expected_iss!r}")
         if not aud_matches:
             raise JWTClaimsError(f"Audience mismatch: {token_aud!r} vs {expected_aud!r}")
 
@@ -225,7 +261,7 @@ async def verify_keycloak_token(token: str) -> KeycloakUser:
             "JWT claims validation failed: %s (expected aud=%r, iss=%r)",
             exc,
             settings.keycloak_jwt_audience,
-            settings.keycloak_issuer,
+            _configured_keycloak_issuer() or "<token issuer>",
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -260,7 +296,7 @@ APP_TOKEN_ALGORITHM = "HS256"
 
 
 def _app_token_secret() -> str:
-    secret = settings.app_token_secret or settings.keycloak_client_secret or settings.backup_api_token
+    secret = settings.app_token_secret or settings.backup_api_token
     if not secret:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

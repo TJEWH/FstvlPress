@@ -171,6 +171,10 @@ Configure these in Portainer or your `.env` file:
 | `MONGO_ROOT_PASSWORD` | MongoDB admin password | `secure_password_123` |
 | `MINIO_ROOT_USER` | MinIO admin username | (no default in production) |
 | `MINIO_ROOT_PASSWORD` | MinIO admin password | `secure_password_456` |
+| `OIDC_URL` | Frontend OIDC base URL | `https://login.example.com/auth` |
+| `OIDC_REALM_NAME` | Frontend OIDC realm name | `FstvlPress` |
+| `OIDC_CLIENT_ID` | Frontend SPA client ID | `fstvlpress-web` |
+| `APP_TOKEN_SECRET` | Backend app-token signing secret | `secure_password_app` |
 | `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin password | `secure_password_789` |
 | `KC_DB_PASSWORD` | Keycloak DB password | `secure_password_abc` |
 
@@ -187,7 +191,8 @@ Configure these in Portainer or your `.env` file:
 | `FRONTEND_PORT` | `80` | Frontend exposed port |
 | `KEYCLOAK_PORT` | `8080` | Keycloak exposed port |
 | `MONGO_DB` | `2026` | MongoDB database name |
-| `KEYCLOAK_REALM` | (set in env) | Keycloak realm name |
+| `OIDC_CLIENT_SECRET` | (empty) | Optional frontend nginx token-proxy client secret |
+| `KEYCLOAK_ADMIN_ROLES` | (empty) | Optional comma-separated roles that grant internal admin access |
 | `KC_HOSTNAME` | `localhost` | Keycloak external hostname |
 | `CORS_ORIGINS` | (see .env.example) | Allowed CORS origins |
 
@@ -207,17 +212,17 @@ docker exec -it fstvlpress-minio mc anonymous set download local/fstvlpress-asse
 
 ### 2. Configure Keycloak
 
-Configure the stack with your Keycloak/OIDC provider via environment variables.
+Configure the frontend with your Keycloak/OIDC provider via environment variables.
 
-Create clients in your realm:
+Create a browser client in your realm:
 - **fstvlpress-web** (public client for SPA)
   - Access Type: public
   - Valid Redirect URIs: `https://your-domain.com/*`
   - Web Origins: `https://your-domain.com`
-- **fstvlpress-api** (confidential client for backend)
-  - Access Type: confidential
-  - Service Accounts Enabled: Yes
-  - Copy the client secret to `KEYCLOAK_CLIENT_SECRET`
+
+The backend does not need Keycloak URL, realm, client ID, or client secret
+deployment variables. It validates Keycloak access tokens against the issuer
+carried by the token and uses `KEYCLOAK_ADMIN_ROLES` only for access mapping.
 
 Note: If running your own Keycloak instance (included in docker-compose.yml), access it at `http://localhost:8080` and create a realm first.
 
