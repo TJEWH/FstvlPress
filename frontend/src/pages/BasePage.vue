@@ -3882,19 +3882,19 @@ async function loadPage() {
       const bundle = await api.getPublicPageBundle(pageSlug.value);
       state.publicCssSnippets = Array.isArray(bundle?.css_snippets) ? bundle.css_snippets : [];
       if (Array.isArray(bundle?.menu_items)) {
-        window.__SSC_PUBLIC_MENU_ITEMS = bundle.menu_items;
+        window.__FSTVLPRESS_PUBLIC_MENU_ITEMS = bundle.menu_items;
         window.dispatchEvent(new Event("fstvlpress-public-menu-updated"));
       }
       if (Array.isArray(bundle?.footer_items)) {
-        window.__SSC_PUBLIC_FOOTER_ITEMS = bundle.footer_items;
+        window.__FSTVLPRESS_PUBLIC_FOOTER_ITEMS = bundle.footer_items;
       }
-      window.__SSC_PUBLIC_TOPBAR_LOGO_URL = bundle?.topbar_logo_url || null;
-      window.__SSC_PUBLIC_TOPBAR_LOGO_RESPONSIVE_VARIANTS = Array.isArray(bundle?.topbar_logo_responsive_variants)
+      window.__FSTVLPRESS_PUBLIC_TOPBAR_LOGO_URL = bundle?.topbar_logo_url || null;
+      window.__FSTVLPRESS_PUBLIC_TOPBAR_LOGO_RESPONSIVE_VARIANTS = Array.isArray(bundle?.topbar_logo_responsive_variants)
         ? bundle.topbar_logo_responsive_variants
         : [];
       window.dispatchEvent(new Event("fstvlpress-public-topbar-updated"));
-      window.__SSC_PUBLIC_FOOTER_LOGO_URL = bundle?.footer_logo_url || null;
-      window.__SSC_PUBLIC_FOOTER_LOGO_RESPONSIVE_VARIANTS = Array.isArray(bundle?.footer_logo_responsive_variants)
+      window.__FSTVLPRESS_PUBLIC_FOOTER_LOGO_URL = bundle?.footer_logo_url || null;
+      window.__FSTVLPRESS_PUBLIC_FOOTER_LOGO_RESPONSIVE_VARIANTS = Array.isArray(bundle?.footer_logo_responsive_variants)
         ? bundle.footer_logo_responsive_variants
         : [];
       window.dispatchEvent(new Event("fstvlpress-public-footer-updated"));

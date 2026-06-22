@@ -1471,7 +1471,7 @@ function onPinAllSectionEditorsRequest() {
 }
 
 function pinAllSectionEditors() {
-  window.dispatchEvent(new CustomEvent("ssc:pin-all-section-editors"));
+  window.dispatchEvent(new CustomEvent("fstvlpress:pin-all-section-editors"));
 }
 
 function onReleaseAllSectionEditorsRequest() {
@@ -1479,7 +1479,7 @@ function onReleaseAllSectionEditorsRequest() {
 }
 
 function releaseAllSectionEditors() {
-  window.dispatchEvent(new CustomEvent("ssc:release-all-section-editors"));
+  window.dispatchEvent(new CustomEvent("fstvlpress:release-all-section-editors"));
 }
 
 function resolvePinnedTabPreference(preferredTab = "") {
@@ -1569,8 +1569,8 @@ watch(
 
 onMounted(() => {
   setupGlobalTeleportHost();
-  window.addEventListener("ssc:pin-all-section-editors", onPinAllSectionEditorsRequest);
-  window.addEventListener("ssc:release-all-section-editors", onReleaseAllSectionEditorsRequest);
+  window.addEventListener("fstvlpress:pin-all-section-editors", onPinAllSectionEditorsRequest);
+  window.addEventListener("fstvlpress:release-all-section-editors", onReleaseAllSectionEditorsRequest);
   nextTick(() => {
     setupTeleportHost();
   });
@@ -2338,7 +2338,7 @@ async function loadSectionCssSnippets() {
 }
 
 function notifySnippetChanged() {
-  window.dispatchEvent(new CustomEvent("ssc:css-snippet-changed"));
+  window.dispatchEvent(new CustomEvent("fstvlpress:css-snippet-changed"));
   window.dispatchEvent(new Event("fstvlpress-template-snippets-updated"));
 }
 
@@ -2369,7 +2369,7 @@ async function saveSectionCustomCssSnippet() {
 }
 
 function openCustomCssInDesignPanel() {
-  window.dispatchEvent(new CustomEvent("ssc:open-design-custom-css"));
+  window.dispatchEvent(new CustomEvent("fstvlpress:open-design-custom-css"));
 }
 
 async function toggleSectionCssSnippet(snippet) {
@@ -2586,8 +2586,8 @@ onBeforeUnmount(() => {
   removeSectionAdminPinnedEditor(instanceId);
   stopPinnedResize();
   window.removeEventListener("resize", syncPinnedHeightToViewport);
-  window.removeEventListener("ssc:pin-all-section-editors", onPinAllSectionEditorsRequest);
-  window.removeEventListener("ssc:release-all-section-editors", onReleaseAllSectionEditorsRequest);
+  window.removeEventListener("fstvlpress:pin-all-section-editors", onPinAllSectionEditorsRequest);
+  window.removeEventListener("fstvlpress:release-all-section-editors", onReleaseAllSectionEditorsRequest);
   if (props.sectionKey) {
     setSectionAdminActiveTab(props.sectionKey, "");
   }

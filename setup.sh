@@ -24,7 +24,7 @@ MINIO_CONSOLE_PORT=9001
 MINIO_USER="local-minio"
 MINIO_PASSWORD="local-minio-password"
 BUCKET_NAME="fstvlpress-assets"
-DB_NAME="ssc26-dev"
+DB_NAME="fstvlpress26-dev"
 
 print_header() {
     echo ""

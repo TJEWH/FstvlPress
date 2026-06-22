@@ -182,8 +182,8 @@ function applyTopbarLogoPayload(payload) {
 
 function applyPublicTopbarLogoPayload() {
   applyTopbarLogoPayload({
-    topbar_logo_url: window.__SSC_PUBLIC_TOPBAR_LOGO_URL,
-    topbar_logo_responsive_variants: window.__SSC_PUBLIC_TOPBAR_LOGO_RESPONSIVE_VARIANTS,
+    topbar_logo_url: window.__FSTVLPRESS_PUBLIC_TOPBAR_LOGO_URL,
+    topbar_logo_responsive_variants: window.__FSTVLPRESS_PUBLIC_TOPBAR_LOGO_RESPONSIVE_VARIANTS,
   });
 }
 

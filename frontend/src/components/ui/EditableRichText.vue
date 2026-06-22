@@ -79,7 +79,7 @@ import "@vueup/vue-quill/dist/vue-quill.snow.css";
 import { useStore } from "../../store/store.js";
 
 try {
-  const globalKey = "__sscQuillDivBlockRegistered";
+  const globalKey = "__fstvlpressQuillDivBlockRegistered";
   if (!globalThis[globalKey]) {
     const Block = Quill.import("blots/block");
     class DivBlock extends Block {}

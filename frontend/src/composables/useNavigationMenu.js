@@ -284,7 +284,7 @@ export function useNavigationMenu(options = {}) {
       }
 
       if (!state.isAdmin) {
-        const cachedMenu = window.__SSC_PUBLIC_MENU_ITEMS;
+        const cachedMenu = window.__FSTVLPRESS_PUBLIC_MENU_ITEMS;
         menuPages.value = Array.isArray(cachedMenu) ? cachedMenu : [];
         return;
       }
@@ -300,7 +300,7 @@ export function useNavigationMenu(options = {}) {
 
   function handlePublicMenuUpdate() {
     if (state.isAdmin || state.previewMode) return;
-    const cachedMenu = window.__SSC_PUBLIC_MENU_ITEMS;
+    const cachedMenu = window.__FSTVLPRESS_PUBLIC_MENU_ITEMS;
     if (Array.isArray(cachedMenu)) {
       menuPages.value = cachedMenu;
     }
