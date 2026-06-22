@@ -71,26 +71,41 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import DOMPurify from "dompurify";
-import { QuillEditor, Quill } from "@vueup/vue-quill";
+import { QuillEditor, loadQuill } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
 
 import { useStore } from "../../store/store.js";
 
-try {
-  const globalKey = "__fstvlpressQuillDivBlockRegistered";
-  if (!globalThis[globalKey]) {
-    const Block = Quill.import("blots/block");
+const QUILL_DIV_BLOCK_REGISTERED_KEY = "__fstvlpressQuillDivBlockRegistered";
+const QUILL_DIV_BLOCK_PROMISE_KEY = "__fstvlpressQuillDivBlockRegistrationPromise";
+
+async function ensureQuillDivBlockRegistered() {
+  if (globalThis[QUILL_DIV_BLOCK_REGISTERED_KEY]) return;
+  if (globalThis[QUILL_DIV_BLOCK_PROMISE_KEY]) {
+    await globalThis[QUILL_DIV_BLOCK_PROMISE_KEY];
+    return;
+  }
+
+  globalThis[QUILL_DIV_BLOCK_PROMISE_KEY] = (async () => {
+    const quill = await loadQuill();
+    const Block = quill.import("blots/block");
     class DivBlock extends Block {}
 
+    DivBlock.blotName = "block";
     DivBlock.tagName = "DIV";
     // true means overwrite the default blot
-    Quill.register("blots/block", DivBlock, true);
-    globalThis[globalKey] = true;
+    quill.register("blots/block", DivBlock, true);
+    globalThis[QUILL_DIV_BLOCK_REGISTERED_KEY] = true;
+  })();
+
+  try {
+    await globalThis[QUILL_DIV_BLOCK_PROMISE_KEY];
+  } catch (error) {
+    globalThis[QUILL_DIV_BLOCK_PROMISE_KEY] = null;
+    console.warn("Failed to register Quill DIV block override:", error);
   }
-} catch (error) {
-  console.warn("Failed to register Quill DIV block override:", error);
 }
 
 const props = defineProps({
@@ -124,6 +139,10 @@ const quillToolbar = [
 
 const asTag = computed(() => props.as || "div");
 const plainView = computed(() => props.plainView === true);
+
+onMounted(() => {
+  ensureQuillDivBlockRegistered();
+});
 
 watch(
   () => props.isAdmin,
@@ -201,8 +220,9 @@ function normalizeEditorContent(value) {
   return textOnly ? html : "";
 }
 
-function start() {
+async function start() {
   if (props.disabled) return;
+  await ensureQuillDivBlockRegistered();
   draftDe.value = getI18nValue(props.modelValue, "de");
   draftEn.value = getI18nValue(props.modelValue, "en");
   editing.value = true;
