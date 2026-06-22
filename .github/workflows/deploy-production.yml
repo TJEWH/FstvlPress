@@ -4,10 +4,11 @@
 # Builds frontend and backend, pushes to GitHub Container Registry,
 # then triggers Portainer webhooks to update the services.
 #
-# Only rebuilds/redeploys services whose source files actually changed.
+# Pushes to main, including merged pull requests, rebuild and redeploy both
+# services so production images always match the main commit.
 #
 # Triggers:
-#   - Push to 'main' branch
+#   - Push to 'main' branch, including pull request merges
 #
 # Images pushed to:
 #   - ghcr.io/<owner>/fstvlpress-frontend:latest
@@ -53,6 +54,15 @@ jobs:
         id: diff
         run: |
           BEFORE="${{ github.event.before }}"
+
+          # Production deploys from main should always publish fresh images for
+          # both services. A merged pull request creates this push event.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "backend=true"  >> "$GITHUB_OUTPUT"
+            echo "::notice::Main deployment - building both services"
+            exit 0
+          fi
 
           # First push to branch → build everything
           if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE" ]; then
