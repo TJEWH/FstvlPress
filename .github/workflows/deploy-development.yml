@@ -20,7 +20,7 @@
 #   PORTAINER_WEBHOOK_BACKEND  - Portainer webhook URL for backend service
 # =============================================================================
 
-name: Deploy Production
+name: Deploy Development
 
 on:
   push:
