@@ -1,0 +1,344 @@
+# =============================================================================
+# Portainer Stack Configuration for FstvlPress
+# =============================================================================
+# This is a Portainer-optimized version of the docker-compose.yml
+# Use this file when deploying through Portainer's stack feature
+#
+# Instructions:
+# 1. In Portainer, go to Stacks > Add Stack
+# 2. Choose "Web editor" and paste this content
+# 3. Configure environment variables below
+# 4. Deploy the stack
+# =============================================================================
+
+version: "3.8"
+
+services:
+  # =============================================================================
+  # Frontend - Vue.js Application
+  # =============================================================================
+  frontend:
+    # Default to GHCR images so Portainer does not silently fall back to stale
+    # host-local images after host upgrades/reinstalls.
+    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-frontend:${TAG:-latest}
+    environment:
+      - S3_BUCKET=${S3_BUCKET:-fstvlpress-assets}
+      - APP_DISPLAY_NAME=${APP_DISPLAY_NAME:-}
+      - OIDC_URL=${OIDC_URL:?Set OIDC_URL}
+      - OIDC_REALM_NAME=${OIDC_REALM_NAME:?Set OIDC_REALM_NAME}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:?Set OIDC_CLIENT_ID}
+      # Server-side only: used for confidential OIDC client auth at token proxy.
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - API_PROXY_READ_TIMEOUT=${API_PROXY_READ_TIMEOUT:-900s}
+      - API_PROXY_SEND_TIMEOUT=${API_PROXY_SEND_TIMEOUT:-900s}
+      - API_PROXY_CONNECT_TIMEOUT=${API_PROXY_CONNECT_TIMEOUT:-75s}
+      - BACKUP_UPLOAD_MAX_BODY_SIZE=${BACKUP_UPLOAD_MAX_BODY_SIZE:-1g}
+      - BACKUP_PROXY_READ_TIMEOUT=${BACKUP_PROXY_READ_TIMEOUT:-3600s}
+      - BACKUP_PROXY_SEND_TIMEOUT=${BACKUP_PROXY_SEND_TIMEOUT:-3600s}
+      - BACKUP_CLIENT_BODY_TIMEOUT=${BACKUP_CLIENT_BODY_TIMEOUT:-3600s}
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.0001"
+          memory: 128M
+        limits:
+          cpus: "0.5"
+          memory: 256M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    ports:
+      - target: 80
+        published: ${FRONTEND_PORT:-80}
+        protocol: tcp
+        mode: ingress
+    networks:
+      - fstvlpress-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =============================================================================
+  # Backend - FastAPI Application
+  # =============================================================================
+  backend:
+    image: ${REGISTRY:-ghcr.io/your-org/}fstvlpress-backend:${TAG:-latest}
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.0001"
+          memory: 128M
+        limits:
+          cpus: "1.0"
+          memory: 512M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      - ENVIRONMENT=production
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}@mongodb:27017
+      - MONGO_DB=${MONGO_DB:-2026}
+      - KEYCLOAK_SERVER_URL=${KEYCLOAK_SERVER_URL:?Set KEYCLOAK_SERVER_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:?Set KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:?Set KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-}
+      - STORAGE_BACKEND=s3
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}}
+      - S3_BUCKET=${S3_BUCKET:-fstvlpress-assets}
+      - S3_PUBLIC_BASE_URL=${S3_PUBLIC_BASE_URL:-/storage}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost}
+    networks:
+      - fstvlpress-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # =============================================================================
+  # MongoDB - Database
+  # =============================================================================
+  mongodb:
+    image: mongo:7.0
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.0001"
+          memory: 128M
+        limits:
+          cpus: "1.0"
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodb-data:/data/db
+      - mongodb-config:/data/configdb
+    networks:
+      - fstvlpress-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # =============================================================================
+  # MinIO - S3-Compatible Object Storage
+  # =============================================================================
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.0001"
+          memory: 128M
+        limits:
+          cpus: "1.0"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    # Ports not exposed - MinIO accessed internally via nginx proxy (/storage) and backend
+    # For admin access, use: docker exec -it <minio-container> ... or port-forward to localhost
+    networks:
+      - fstvlpress-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # =============================================================================
+  # MinIO Setup - Create bucket (and optional service account)
+  # =============================================================================
+  minio-setup:
+    image: minio/mc:latest
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\" 2>/dev/null; do echo 'Waiting for MinIO...'; sleep 3; done;
+      mc mb --ignore-existing local/$${S3_BUCKET};
+      mc anonymous set download local/$${S3_BUCKET};
+      if [ -n \"$${S3_ACCESS_KEY_ID}\" ] && [ -n \"$${S3_SECRET_ACCESS_KEY}\" ]; then
+        echo '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:PutObject\",\"s3:GetObject\",\"s3:DeleteObject\"],\"Resource\":[\"arn:aws:s3:::'$${S3_BUCKET}'/*\"]}]}' > /tmp/policy.json;
+        mc admin policy create local fstvlpress-bucket-rw /tmp/policy.json 2>/dev/null || true;
+        mc admin accesskey create local/ --access-key \"$${S3_ACCESS_KEY_ID}\" --secret-key \"$${S3_SECRET_ACCESS_KEY}\" --policy /tmp/policy.json 2>/dev/null || echo 'Service account may exist';
+      fi;
+      echo 'MinIO bucket setup complete';
+      "
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      - S3_BUCKET=${S3_BUCKET:-fstvlpress-assets}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+    networks:
+      - fstvlpress-network
+
+  # =============================================================================
+  # Keycloak - Authentication Server
+  # =============================================================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: start
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.0001"
+          memory: 128M
+        limits:
+          cpus: "1.5"
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=${KC_DB_USER:-keycloak}
+      - KC_DB_PASSWORD=${KC_DB_PASSWORD:?Set KC_DB_PASSWORD}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD}
+      - KC_HOSTNAME=${KC_HOSTNAME:-localhost}
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      - KC_PROXY=edge
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+    ports:
+      - target: 8080
+        published: ${KEYCLOAK_PORT:-8080}
+        protocol: tcp
+        mode: ingress
+    networks:
+      - fstvlpress-network
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # =============================================================================
+  # PostgreSQL - Keycloak Database
+  # =============================================================================
+  keycloak-db:
+    image: postgres:16-alpine
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: "0.0001"
+          memory: 128M
+        limits:
+          cpus: "0.5"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=${KC_DB_USER:-keycloak}
+      - POSTGRES_PASSWORD=${KC_DB_PASSWORD:?Set KC_DB_PASSWORD}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    networks:
+      - fstvlpress-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  fstvlpress-network:
+    driver: overlay
+    attachable: true
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  mongodb-data:
+    driver: local
+  mongodb-config:
+    driver: local
+  minio-data:
+    driver: local
+  keycloak-db-data:
+    driver: local

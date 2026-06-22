@@ -1,0 +1,22 @@
+---
+description: Workflow for adding section-specific parameters
+globs: frontend/src/components/sections/**/*.vue
+alwaysApply: false
+---
+
+# Adding Section Parameters
+
+Automatic **snake_case ↔ camelCase conversion** is enabled. Simple fields work without extra config.
+
+## Standard Workflow
+
+1. **Use the field in your component** via `sectionVal('myField')` and `updateSection(key, { myField: value })`
+2. **Optionally** add to backend Pydantic model in `backend/app/models/sections/` for type safety
+
+## When Extra Config is Needed
+
+Only add to `SECTION_TYPE_CONFIG` in `store.js` for:
+- **Renamed fields** (different names beyond case conversion)
+- **Arrays with custom item transforms**
+- **Non-null default values**
+- **Side effects on load** (e.g., updating global state)

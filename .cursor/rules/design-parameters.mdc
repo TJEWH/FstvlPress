@@ -1,0 +1,94 @@
+---
+description: Workflow for adding design parameters (colors, typography, layout, etc.)
+globs: frontend/src/designDefs.js
+alwaysApply: false
+---
+
+# Adding Design Parameters
+
+## Before Making Changes
+
+When the user requests a new design parameter, extract the following from their prompt:
+
+1. **Parameter name(s)** - camelCase name for frontend (e.g., `heroTitleTextShadowOffset`)
+2. **Type** - slider, color, checkbox, dropdown, fontfamily, buttongroup, positiongrid, textarea
+3. **Section** - fonts, colors, sections, header, layout, buttons, bgPattern, customCss
+4. **Subsection** - grouping within section (e.g., "Hero Title Shadow")
+5. **Default value** - initial value when not set
+6. **Overridable** - whether it can be overridden per-section/header
+7. **UI context** - where in the app it applies (e.g., `.hero-title` in base.scss, a component)
+8. **Behavior** - what CSS property or effect it controls
+
+**If any of these is unclear, ASK the user for clarification before proceeding.**
+
+## Files to Update
+
+### 1. Frontend Definition: `frontend/src/designDefs.js`
+
+Add to `DESIGN_PARAMS`:
+
+```javascript
+myNewParam: {
+    default: 14,                    // Default value
+    section: 'header',              // Panel section
+    type: 'slider',                 // UI type
+    label: 'My Param',              // Display label
+    subsection: 'Group Name',       // Optional: group within section
+    min: 0, max: 48, step: 1,       // For sliders
+    unit: 'px',                     // Unit display
+    alphaEnabled: true,             // For color pickers
+    enabledOptions: ['a', 'b'],     // For dropdowns
+    overridable: true,              // Allow per-section override
+}
+```
+
+### 2. Backend Schema: `backend/app/models/cms.py`
+
+Add to `DesignSettingsBase` class:
+
+```python
+my_new_param: int | None = None  # Use appropriate type: int, float, str, bool
+```
+
+### 3. CSS Application: `frontend/src/store/store.js`
+
+Add to `applyDesignCSS()` function (find appropriate location based on section):
+
+```javascript
+// For simple value → CSS variable
+if (d.myNewParam != null) root.style.setProperty('--my-new-param', d.myNewParam + 'px');
+else root.style.removeProperty('--my-new-param');
+
+// For conditional/composed values
+if (d.myFeatureEnabled) {
+    root.style.setProperty('--my-css-var', `${d.myValue}px ${d.myColor}`);
+} else {
+    root.style.setProperty('--my-css-var', 'none');
+}
+```
+
+### 4. UI Context: Apply the CSS Variable
+
+**For global styles** (`frontend/src/styles/base.scss`):
+```scss
+.target-element {
+    property: var(--my-new-param, fallback);
+}
+```
+
+**For component-specific styles**: Add to the relevant `.vue` component's `<style>` block.
+
+## Auto-Derived (No Manual Work)
+
+- `snake_case` backend key from camelCase
+- UI config for DesignPanel and AdminDesign
+- Section grouping and ordering in panels
+- Default values initialization
+
+## Checklist
+
+- [ ] Parameter defined in `designDefs.js`
+- [ ] Field added to `cms.py` → `DesignSettingsBase`
+- [ ] CSS variable set in `store.js` → `applyDesignCSS()`
+- [ ] CSS variable used in stylesheet or component
+- [ ] Verify no linter errors in all modified files

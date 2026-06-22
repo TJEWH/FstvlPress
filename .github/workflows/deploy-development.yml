@@ -1,0 +1,245 @@
+# =============================================================================
+# Deploy Production to GHCR
+# =============================================================================
+# Builds frontend and backend, pushes to GitHub Container Registry,
+# then triggers Portainer webhooks to update the services.
+#
+# Only rebuilds/redeploys services whose source files actually changed.
+# Manual triggers and releases always build both.
+#
+# Triggers:
+#   - Push to 'dev' branch
+#   - Manual workflow dispatch
+#   - Release published
+#
+# Images pushed to:
+#   - ghcr.io/<owner>/fstvlpress-frontend:latest
+#   - ghcr.io/<owner>/fstvlpress-backend:latest
+#
+# Required secrets:
+#   PORTAINER_WEBHOOK_FRONTEND - Portainer webhook URL for frontend service
+#   PORTAINER_WEBHOOK_BACKEND  - Portainer webhook URL for backend service
+# =============================================================================
+
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}/
+  TAG: latest
+  APP_DISPLAY_NAME: ${{ vars.APP_DISPLAY_NAME }}
+  OIDC_URL: ${{ vars.OIDC_URL }}
+  OIDC_REALM_NAME: ${{ vars.OIDC_REALM_NAME }}
+  OIDC_CLIENT_ID: ${{ vars.OIDC_CLIENT_ID }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect which parts of the repo changed
+  # ---------------------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      frontend: ${{ steps.diff.outputs.frontend }}
+      backend: ${{ steps.diff.outputs.backend }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Diff against previous branch tip
+        id: diff
+        run: |
+          BEFORE="${{ github.event.before }}"
+
+          # First push to branch or manual/release trigger → build everything
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE" ]; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "backend=true"  >> "$GITHUB_OUTPUT"
+            echo "::notice::No previous commit — building both services"
+            exit 0
+          fi
+
+          # Ensure the old commit is reachable (it always should be with fetch-depth 0)
+          if ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "backend=true"  >> "$GITHUB_OUTPUT"
+            echo "::warning::Previous commit $BEFORE not reachable — building both services"
+            exit 0
+          fi
+
+          # Two-dot diff: all files that changed between old branch tip and new HEAD.
+          # This correctly captures everything introduced by a merge, unlike the
+          # three-dot diff that paths-filter uses which can miss merged-in changes.
+          CHANGED=$(git diff --name-only "$BEFORE" HEAD)
+          echo "--- changed files ---"
+          echo "$CHANGED"
+          echo "---------------------"
+
+          if echo "$CHANGED" | grep -q '^frontend/'; then
+            echo "frontend=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if echo "$CHANGED" | grep -q '^backend/'; then
+            echo "backend=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "backend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Shared preflight checks that must pass before any image is built or deployed
+  # ---------------------------------------------------------------------------
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run case consistency guard
+        run: node scripts/check-case-consistency.mjs
+
+  # ---------------------------------------------------------------------------
+  # Build & push frontend image
+  # ---------------------------------------------------------------------------
+  build-frontend:
+    needs: [detect-changes, preflight]
+    if: needs.preflight.result == 'success' && (needs.detect-changes.outputs.frontend == 'true' || github.event_name != 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}fstvlpress-frontend:latest
+            ${{ env.REGISTRY }}fstvlpress-frontend:${{ github.sha }}
+          build-args: |
+            VITE_API_BASE=/api/v1
+            VITE_APP_DISPLAY_NAME=${{ env.APP_DISPLAY_NAME }}
+            VITE_OIDC_URL=${{ env.OIDC_URL }}
+            VITE_OIDC_REALM_NAME=${{ env.OIDC_REALM_NAME }}
+            VITE_OIDC_CLIENT_ID=${{ env.OIDC_CLIENT_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # Build & push backend image
+  # ---------------------------------------------------------------------------
+  build-backend:
+    needs: [detect-changes, preflight]
+    if: needs.preflight.result == 'success' && (needs.detect-changes.outputs.backend == 'true' || github.event_name != 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}fstvlpress-backend:latest
+            ${{ env.REGISTRY }}fstvlpress-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # Trigger Portainer webhooks only after preflight and all requested builds pass
+  # ---------------------------------------------------------------------------
+  deploy:
+    needs: [preflight, build-frontend, build-backend]
+    if: >
+      always()
+      && !cancelled()
+      && needs.preflight.result == 'success'
+      && (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+      && (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped')
+      && (needs.build-frontend.result == 'success' || needs.build-backend.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend webhook
+        if: needs.build-backend.result == 'success'
+        run: |
+          echo "Triggering backend service update..."
+          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_BACKEND }}" || echo "::warning::Backend webhook failed"
+
+      - name: Trigger frontend webhook
+        if: needs.build-frontend.result == 'success'
+        run: |
+          echo "Triggering frontend service update..."
+          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_FRONTEND }}" || echo "::warning::Frontend webhook failed"
+
+      - name: Deployment summary
+        run: |
+          echo "## Production deployment complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services rebuilt and deployed:" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.build-frontend.result }}" = "success" ]; then
+            echo "- \`${{ env.REGISTRY }}fstvlpress-frontend:latest\` — built & webhook triggered" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- \`fstvlpress-frontend\` — skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.build-backend.result }}" = "success" ]; then
+            echo "- \`${{ env.REGISTRY }}fstvlpress-backend:latest\` — built & webhook triggered" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- \`fstvlpress-backend\` — skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Frontend Configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "- App display name: \`${{ env.APP_DISPLAY_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### OIDC Configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "- URL: \`${{ env.OIDC_URL }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Realm: \`${{ env.OIDC_REALM_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Client ID: \`${{ env.OIDC_CLIENT_ID }}\`" >> $GITHUB_STEP_SUMMARY

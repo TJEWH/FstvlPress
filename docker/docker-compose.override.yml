@@ -1,0 +1,28 @@
+# Docker Compose Override for Local Development
+# This file is automatically loaded when running `docker-compose up` from docker/ directory
+# For production, use: docker-compose -f docker/docker-compose.yml up
+
+version: "3.8"
+
+services:
+  # Development overrides - expose additional ports and use less restrictive settings
+  
+  backend:
+    # Mount source code for hot reload
+    volumes:
+      - ../backend/app:/app/app:ro
+    environment:
+      - ENVIRONMENT=development
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,http://localhost
+    ports:
+      - "8000:8000"
+
+  mongodb:
+    # Expose MongoDB for local development tools
+    ports:
+      - "27017:27017"
+
+  keycloak:
+    environment:
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false

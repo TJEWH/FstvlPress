@@ -1,0 +1,92 @@
+{
+  "version": "0.3.0",
+  "configurations": [
+    {
+      "name": "Frontend (Vue + Vite)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMaps": true,
+      "trace": true
+    },
+    {
+      "name": "Backend (Local Docker MongoDB) - Port 8080",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": ["app.main:app", "--reload", "--port", "8080"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "ENVIRONMENT": "dev",
+        "MONGO_URI": "mongodb://localhost:27017",
+        "MONGO_DB": "2026"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Backend (Atlas MongoDB) - Port 8000",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": ["app.main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Backend (Local Keycloak) - Port 8080",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": ["app.main:app", "--reload", "--port", "8080"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "ENVIRONMENT": "local-keycloak",
+        "MONGO_URI": "mongodb://localhost:27017",
+        "MONGO_DB": "2026",
+        "KEYCLOAK_SERVER_URL": "http://localhost:8180",
+        "KEYCLOAK_REALM": "FstvlPressLocal",
+        "KEYCLOAK_CLIENT_ID": "fstvlpress-api",
+        "KEYCLOAK_CLIENT_SECRET": "local-dev-client-secret",
+        "KEYCLOAK_ADMIN_ROLES": "admin"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (Atlas) - Backend:8000 + Frontend",
+      "configurations": ["Backend (Atlas MongoDB) - Port 8000"],
+      "preLaunchTask": "Frontend (API Port 8000)",
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (DEBUG FRONTEND)",
+      "configurations": [
+        "Backend (Local Docker MongoDB) - Port 8080",
+        "Frontend (Vue + Vite)"
+      ],
+      "preLaunchTask": "Frontend (API Port 8080)",
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (No Auth) - Backend:8080 + Frontend",
+      "configurations": ["Backend (Local Docker MongoDB) - Port 8080"],
+      "preLaunchTask": "Frontend (API Port 8080)",
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (Local Keycloak) - Backend:8080 + Frontend",
+      "configurations": ["Backend (Local Keycloak) - Port 8080"],
+      "preLaunchTask": "Frontend (Local Keycloak)",
+      "stopAll": true
+    }
+  ]
+}

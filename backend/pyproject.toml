@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "fstvlpress-backend"
+version = "0.1.0"
+description = "FastAPI backend for FstvlPress, a wysiwyg festival website builder"
+authors = ["Tim Edelmann"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.128.0"
+uvicorn = { extras = ["standard"], version = "^0.30.0" }
+motor = "^3.5.0"
+pydantic-settings = "^2.4.0"
+python-multipart = "^0.0.9"
+httpx = "^0.27.0"
+python-jose = { extras = ["cryptography"], version = "^3.3.0" }
+boto3 = "^1.42.35"
+aioftp = "^0.27.2"
+pillow = "^11.0.0"
+markdown = "^3.10.1"
+beautifulsoup4 = "^4.14.3"
+lxml = "^6.0.2"
+awscli = "^1.44.36"
+svgelements = "^1.9.6"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.14.14"
+pre-commit = "^4.5.1"
+debugpy = "^1.8.20"
+pytest = "^9.1.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

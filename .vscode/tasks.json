@@ -1,0 +1,108 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start MinIO (Volume for Local)",
+      "type": "shell",
+      "command": "if docker ps -a --format '{{.Names}}' | grep -q '^minio$'; then docker start minio 2>/dev/null; fi",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    },
+    {
+      "label": "Frontend (API Port 8080)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["scripts/dev.sh"],
+      "dependsOn": ["Start MinIO (Volume for Local)"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend",
+        "env": {
+          "VITE_API_BASE": "/api/v1"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Finding Node|Using Node|VITE",
+          "endsPattern": "ready in"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "group": "dev"
+      }
+    },
+    {
+      "label": "Frontend (API Port 8000)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["scripts/dev.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend",
+        "env": {
+          "VITE_API_BASE": "/api/v1"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Finding Node|Using Node|VITE",
+          "endsPattern": "ready in"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "group": "dev"
+      }
+    },
+    {
+      "label": "Frontend (Local Keycloak)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["scripts/dev.sh"],
+      "dependsOn": ["Start MinIO (Volume for Local)", "Start Local Keycloak"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend",
+        "env": {
+          "VITE_API_BASE": "/api/v1",
+          "VITE_USE_LOCAL_KEYCLOAK": "true"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Finding Node|Using Node|VITE",
+          "endsPattern": "ready in"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "group": "dev"
+      }
+    },
+    {
+      "label": "Start Local Keycloak",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.keycloak-only.yml up -d && echo 'Waiting for Keycloak...' && until curl -sf http://localhost:8180/health/ready > /dev/null 2>&1; do sleep 2; done && echo 'Keycloak ready'",
+      "options": { "cwd": "${workspaceFolder}/docker" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    }
+  ]
+}
